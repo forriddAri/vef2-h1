@@ -1,0 +1,1 @@
+//DATABASE_URL=postgres://krab_user:securepassword@localhost:5432/krab

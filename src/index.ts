@@ -3,26 +3,14 @@ import { PrismaClient } from "@prisma/client";
 import { sign, verify } from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { cloudinary } from "./cloudinary";
+import { authMiddleware } from "./middleware/authMiddleware";  // ✅ Keep this
 import { z } from "zod";
 
 const app = new Hono();
 const prisma = new PrismaClient();
 const JWT_SECRET = "supersecret"; // Change this in .env
 
-// Middleware: Authenticate Users
-const authMiddleware = async (c, next) => {
-  const authHeader = c.req.header("Authorization");
-  if (!authHeader) return c.json({ error: "Unauthorized" }, 401);
-
-  const token = authHeader.split(" ")[1];
-  try {
-    const user = verify(token, JWT_SECRET);
-    c.set("user", user);
-    await next();
-  } catch (err) {
-    return c.json({ error: "Invalid token" }, 401);
-  }
-};
+// ✅ Remove the duplicated authMiddleware function!
 
 // Admin Middleware
 const adminMiddleware = async (c, next) => {
@@ -72,18 +60,32 @@ app.get("/images/random", authMiddleware, async (c) => {
 app.post("/images/rate/:id", authMiddleware, async (c) => {
   const { id } = c.req.param();
   const { score } = await c.req.json();
-  await prisma.rating.create({ data: { userId: c.get("user").id, imageId: id, score } });
+
+  if (![1, -1].includes(score)) {
+    return c.json({ error: "Invalid rating value, must be 1 or -1" }, 400);
+  }
+
+  await prisma.rating.create({
+    data: {
+      userId: c.get("user").id,
+      imageId: id,
+      score,
+    },
+  });
+
   return c.json({ message: "Rated successfully" });
 });
 
 // Get Median Score
 app.get("/images/median", authMiddleware, async (c) => {
   const ratings = await prisma.rating.findMany();
-  const scores = ratings.map((r) => r.score);
-  scores.sort((a, b) => a - b);
-  const median = scores.length % 2 === 0
-    ? (scores[scores.length / 2 - 1] + scores[scores.length / 2]) / 2
-    : scores[Math.floor(scores.length / 2)];
+  const scores = ratings.map((r) => r.score).sort((a, b) => a - b);
+
+  const median =
+    scores.length % 2 === 0
+      ? (scores[scores.length / 2 - 1] + scores[scores.length / 2]) / 2
+      : scores[Math.floor(scores.length / 2)];
+
   return c.json({ median });
 });
 

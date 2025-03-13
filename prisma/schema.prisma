@@ -1,25 +1,17 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
 model User {
-  id       String  @id @default(uuid())
-  username String  @unique
+  id       String   @id @default(uuid())
+  username String   @unique
   password String
   role     Role
   ratings  Rating[]
+  images   Image[]
   createdAt DateTime @default(now())
 }
 
 model Image {
   id         String   @id @default(uuid())
   url        String   @unique
-  prompt     String
+  prompt     String   // Description of the image
   uploadedBy User     @relation(fields: [uploadedById], references: [id])
   uploadedById String
   ratings    Rating[]
@@ -40,3 +32,4 @@ enum Role {
   ADMIN
   PLAYER
 }
+

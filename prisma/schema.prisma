@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String  @id @default(uuid())
+  username String  @unique
+  password String
+  role     Role
+  ratings  Rating[]
+  createdAt DateTime @default(now())
+}
+
+model Image {
+  id         String   @id @default(uuid())
+  url        String   @unique
+  prompt     String
+  uploadedBy User     @relation(fields: [uploadedById], references: [id])
+  uploadedById String
+  ratings    Rating[]
+  createdAt  DateTime @default(now())
+}
+
+model Rating {
+  id      String  @id @default(uuid())
+  user    User    @relation(fields: [userId], references: [id])
+  userId  String
+  image   Image   @relation(fields: [imageId], references: [id])
+  imageId String
+  score   Int // 1 for positive, -1 for negative
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  PLAYER
+}
